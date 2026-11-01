@@ -14,7 +14,7 @@ export default function Sidebar({ activeItem, onSelect, messageCount = 0 }) {
                         type="button"
                         onClick={() => onSelect(item.label)}
                     >
-                        <span className="nav-icon">{item.icon}</span>
+                        <span className="nav-icon" aria-hidden="true">{item.icon}</span>
                         <span>{item.label}</span>
                         {(item.label === 'Messages' ? messageCount : item.count) > 0 && (
                             <span className="nav-count">{item.label === 'Messages' ? messageCount : item.count}</span>

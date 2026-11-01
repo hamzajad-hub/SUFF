@@ -224,7 +224,7 @@ export default function ProfilePage({ posts = [], onUpdatePost, currentProfile, 
                     <h2>{activeTab === 'Posts' ? 'Your next idea starts here.' : activeTab === 'Projects' ? 'Build something with your peers.' : 'Good conversations build great code.'}</h2>
                     <p>{activeTab === 'Posts' ? 'Share an update on Home and it will appear here.' : activeTab === 'Projects' ? 'Your project activity will appear here once accounts are connected.' : 'Your discussion activity will appear here when rooms are ready.'}</p>
                     {activeTab !== 'Discussion rooms' && (
-                        <a className="project-secondary" href={activeTab === 'Posts' ? '#/home' : '#/projects'}>{activeTab === 'Posts' ? 'Share a post ↗' : 'Explore projects ↗'}</a>
+                        <a className="project-secondary" href={activeTab === 'Posts' ? '/home' : '/projects'}>{activeTab === 'Posts' ? 'Share a post ↗' : 'Explore projects ↗'}</a>
                     )}
                 </div>
             )}

@@ -3,6 +3,7 @@ import VoteControls from './VoteControls.jsx';
 import { canManageRoom, removeRoomMember, roomMembers, setRoomJoined, voteOn } from '../utils/community.js';
 import CodeBlock from './CodeBlock.jsx';
 import { rankRooms, snippetTemplates } from '../data/roomsData.js';
+import { navigate } from '../utils/routes.js';
 
 function RoomChat({ project, room, onUpdate, onActivity, onBack, onAttach, onDelete }) {
     const [messageSort, setMessageSort] = useState('top');
@@ -97,9 +98,10 @@ function RoomChat({ project, room, onUpdate, onActivity, onBack, onAttach, onDel
                 <button
                     className={room.joined ? 'project-secondary' : 'project-primary'}
                     type="button"
+                    disabled={room.owner === 'you'}
                     onClick={() => onUpdate((current) => setRoomJoined(current, !current.joined))}
                 >
-                    {room.joined ? 'Leave room' : 'Join room'}
+                    {room.owner === 'you' ? 'Room creator' : room.joined ? 'Leave room' : 'Join room'}
                 </button>
             </header>
             <div className="room-community-tools">
@@ -238,13 +240,14 @@ function RoomChat({ project, room, onUpdate, onActivity, onBack, onAttach, onDel
                 </section>
             </div>
             {notice && <p className="page-notice" role="status">{notice}</p>}
-            <p className="room-hint">Local preview · Messages and files remain until you refresh or leave Projects.</p>
+            <p className="room-hint">Local preview · Messages and files remain during navigation, until refresh or logout.</p>
         </section>
     );
 }
 
-export default function DiscussionRooms({ project, rooms, onChange, onActivity, onAttach }) {
-    const [selectedId, setSelectedId] = useState(null);
+export default function DiscussionRooms({ project, rooms, onChange, onActivity, onAttach, initialRoomId = null }) {
+    const [selectedId, setSelectedId] = useState(initialRoomId);
+    useEffect(() => { setSelectedId(initialRoomId); }, [initialRoomId]);
     const [creating, setCreating] = useState(false);
     const [query, setQuery] = useState('');
     const [error, setError] = useState('');
@@ -277,6 +280,7 @@ export default function DiscussionRooms({ project, rooms, onChange, onActivity, 
         onChange((current) => [...current, room]);
         onActivity('room');
         setSelectedId(room.id);
+        navigate(`/projects/${encodeURIComponent(project.id)}?room=${encodeURIComponent(room.id)}`);
         setCreating(false);
         setError('');
     }
@@ -292,8 +296,9 @@ export default function DiscussionRooms({ project, rooms, onChange, onActivity, 
                     onChange((current) => current.filter((room) => room.id !== activeRoom.id));
                     onActivity('delete-room');
                     setSelectedId(null);
+                    navigate(`/projects/${encodeURIComponent(project.id)}`);
                 }}
-                onBack={() => setSelectedId(null)}
+                onBack={() => { setSelectedId(null); navigate(`/projects/${encodeURIComponent(project.id)}`); }}
                 onUpdate={(update) => onChange((current) => current.map((room) => room.id === activeRoom.id ? update(room) : room))}
                 onActivity={() => onActivity('message')}
                 onAttach={onAttach}
@@ -328,7 +333,7 @@ export default function DiscussionRooms({ project, rooms, onChange, onActivity, 
                             <p>{room.topic}</p>
                             <span className="room-hint">{roomMembers(room).length} joined users · {room.activity} messages · created by {room.owner}</span>
                         </div>
-                        <button className="project-secondary" type="button" onClick={() => setSelectedId(room.id)} aria-label={`Open ${room.name}`}>Open room ↗</button>
+                        <a className="project-secondary" href={`/projects/${encodeURIComponent(project.id)}?room=${encodeURIComponent(room.id)}`} onClick={() => setSelectedId(room.id)} aria-label={`Open ${room.name}`}>Open room ↗</a>
                     </article>
                 ))}
                 {!visibleRooms.length && <div className="empty-results"><b>{rooms.length ? 'No matching rooms.' : 'Start the first conversation.'}</b><span>{rooms.length ? 'Try a different name or topic.' : 'Everyone can read, join, and create a community room.'}</span></div>}

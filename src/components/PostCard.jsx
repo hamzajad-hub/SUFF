@@ -13,9 +13,7 @@ export default function PostCard({ post: sourcePost, saved, onToggleSaved, peerS
     const [shareOpen, setShareOpen] = useState(false);
     const [shareNotice, setShareNotice] = useState('');
     const comments = post.thread || (post.recentComments || []).map((comment) => ({ ...comment, id: `sample-${comment.author}-${comment.id}`, parentId: null }));
-    const shareUrl = new URL(window.location.href);
-    shareUrl.search = '';
-    shareUrl.hash = `/home?post=${encodeURIComponent(post.id)}`;
+    const [shareUrl, setShareUrl] = useState('');
 
     function update(change) {
         if (onUpdatePost) onUpdatePost(post.id, change);
@@ -42,7 +40,7 @@ export default function PostCard({ post: sourcePost, saved, onToggleSaved, peerS
 
     async function copyLink() {
         try {
-            await navigator.clipboard.writeText(shareUrl.href);
+            await navigator.clipboard.writeText(shareUrl);
             setShareNotice('Post link copied.');
         } catch {
             setShareNotice('Select and copy the link below.');
@@ -50,10 +48,12 @@ export default function PostCard({ post: sourcePost, saved, onToggleSaved, peerS
     }
 
     async function sharePost() {
+        const url = new URL(`/posts/${encodeURIComponent(post.id)}`, window.location.origin).href;
+        setShareUrl(url);
         setShareOpen(true);
         if (!navigator.share) return;
         try {
-            await navigator.share({ title: post.title, text: post.body || post.title, url: shareUrl.href });
+            await navigator.share({ title: post.title, text: post.body || post.title, url });
             setShareNotice('Share completed.');
         } catch (error) {
             setShareNotice(error.name === 'AbortError' ? 'Sharing cancelled. You can still copy the link.' : 'Use Copy link to share this post.');
@@ -65,7 +65,7 @@ export default function PostCard({ post: sourcePost, saved, onToggleSaved, peerS
             <header className="post-author">
                 <Avatar initials={post.initials} photo={authorPhoto} />
                 <div>
-                    <a className="post-profile-link" href={post.author === 'you' ? '#/profile' : `#/profile/${post.author}`}>{post.author}</a>
+                    <a className="post-profile-link" href={post.author === 'you' ? '/profile' : `/profile/${post.author}`}>{post.author}</a>
                     {post.verified && <span className="verified">42 ✓</span>}
                     <span className="post-time">{post.time === 'now' ? 'just now' : `${post.time} ago`}</span>
                 </div>
@@ -80,7 +80,7 @@ export default function PostCard({ post: sourcePost, saved, onToggleSaved, peerS
             </header>
             {reported && <p className="post-feedback" role="status">Report noted in this preview. Backend connection is needed to send it.</p>}
             <div className="tag-row">{post.tags.map((tag) => <span key={tag}>#{tag}</span>)}</div>
-            <h2>{post.title}</h2>
+            <h2><a className="post-profile-link" href={`/posts/${encodeURIComponent(post.id)}`}>{post.title}</a></h2>
             {post.body && <p>{post.body}</p>}
             {post.attachments?.length > 0 && (
                 <div className="post-attachments">
@@ -105,7 +105,7 @@ export default function PostCard({ post: sourcePost, saved, onToggleSaved, peerS
             {shareOpen && (
                 <section className="post-share-panel" aria-label="Share public post">
                     <div><b>Share public post</b><button type="button" onClick={() => setShareOpen(false)}>Close</button></div>
-                    <label>Post link<input value={shareUrl.href} readOnly onFocus={(event) => event.target.select()} /></label>
+                    <label>Post link<input value={shareUrl} readOnly onFocus={(event) => event.target.select()} /></label>
                     <button type="button" onClick={copyLink}>Copy link</button>
                     {shareNotice && <p role="status">{shareNotice}</p>}
                     <small>Local preview links work on this PC. New posts and attached files need backend storage before others can access them.</small>

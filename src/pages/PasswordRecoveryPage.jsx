@@ -7,12 +7,14 @@ export default function PasswordRecoveryPage({ reset, theme, onToggleTheme }) {
     const [done, setDone] = useState(false);
     const [visible, setVisible] = useState(false);
     const request = useRef(null);
-    const token = useRef(new URLSearchParams(window.location.hash.split('?')[1] || '').get('token') || '');
+    const [token, setToken] = useState('');
 
     useEffect(() => {
         // Remove the recovery secret from the address bar after reading it.
-        if (reset && token.current) {
-            window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#/reset-password`);
+        if (reset) {
+            const secret = new URLSearchParams(window.location.search).get('token') || '';
+            setToken(secret);
+            if (secret) window.history.replaceState(null, '', '/reset-password');
         }
         return () => request.current?.abort();
     }, [reset]);
@@ -41,13 +43,13 @@ export default function PasswordRecoveryPage({ reset, theme, onToggleTheme }) {
         try {
             await requestPasswordRecovery(
                 reset ? 'reset' : 'forgot',
-                reset ? { token: token.current, password } : { email: String(data.get('email')).trim() },
+                reset ? { token, password } : { email: String(data.get('email')).trim() },
                 controller.signal,
             );
             form.reset();
             setVisible(false);
             setDone(true);
-            if (reset) token.current = '';
+            if (reset) setToken('');
             setNotice(reset
                 ? 'Your password has been changed. You can now return to login.'
                 : 'If an account uses this email address, you will receive a password reset link. Check your inbox and spam folder.');
@@ -69,7 +71,7 @@ export default function PasswordRecoveryPage({ reset, theme, onToggleTheme }) {
                 {theme === 'dark' ? '☀ Light' : '☾ Dark'}
             </button>
             <section className="story" aria-label="Account recovery">
-                <a className="brand" href="#/login">SUF · Stack Under Flow</a>
+                <a className="brand" href="/login">SUF · Stack Under Flow</a>
                 <div className="story-body">
                     <div className="eyebrow">BACK TO YOUR COMMUNITY</div>
                     <h1>Pick up<br />where you <em>left off.</em></h1>
@@ -84,7 +86,7 @@ export default function PasswordRecoveryPage({ reset, theme, onToggleTheme }) {
                     <p className="intro">{reset
                         ? 'Use a new password for your SUF account.'
                         : 'Enter your account email and we will request a reset link. If you joined with 42, recover your Intra password through 42.'}</p>
-                    {reset && !token.current && !done ? (
+                    {reset && !token && !done ? (
                         <p className="notice" role="alert">Open the reset link from your email to choose a new password. Missing or expired link? Request another below.</p>
                     ) : !done && (
                         <form onSubmit={submit} aria-busy={busy}>
@@ -109,8 +111,8 @@ export default function PasswordRecoveryPage({ reset, theme, onToggleTheme }) {
                         </form>
                     )}
                     {notice && <p className="notice" role="status">{notice}</p>}
-                    {reset && !done && <p><a href="#/forgot-password">Request a new reset link</a></p>}
-                    <p><a className="text-button" href="#/login">← Back to login</a></p>
+                    {reset && !done && <p><a href="/forgot-password">Request a new reset link</a></p>}
+                    <p><a className="text-button" href="/login">← Back to login</a></p>
                     <p className="prototype">{import.meta.env.VITE_AUTH_API_URL ? 'Password recovery uses connected account services.' : 'Frontend preview · Email delivery and password changes need account services.'}</p>
                 </div>
             </section>

@@ -1,12 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { readStorage, writeStorage } from '../utils/storage.js';
-import { loadProfile } from '../utils/profile.js';
+import { defaultProfile, loadProfile } from '../utils/profile.js';
+import { navigate } from '../utils/routes.js';
 import PostComposer from '../components/PostComposer.jsx';
 import { validatePostFile } from '../utils/community.js';
 import Avatar from '../components/Avatar.jsx';
 import PostCard from '../components/PostCard.jsx';
 import RightPanel from '../components/RightPanel.jsx';
 import MessagesPage from './MessagesPage.jsx';
+import useLiveChat from '../utils/useLiveChat.js';
 import { initialConversations, normalizeConversations, sendDirectMessage, toggleMessageLike } from '../data/messagesData.js';
 import PeersPage from './PeersPage.jsx';
 import PublicProfilePage from './PublicProfilePage.jsx';
@@ -14,25 +16,27 @@ import { peerDirectory, initialRelationships, changeRelationship } from '../data
 import ProfilePage from './ProfilePage.jsx';
 import ProjectsPage from './ProjectsPage.jsx';
 import Sidebar from '../components/Sidebar.jsx';
-import { initialPosts } from '../data/homeData.js';
+import SearchPage from './SearchPage.jsx';
+import { searchUrl } from '../utils/search.js';
 
 const POSTS_PER_PAGE = 20;
 
-export default function HomePage({ onLogOut, theme, onToggleTheme, section = 'home', profileUsername = null, projectId = null, postId = null, messageUsername = null }) {
-    const [conversations, setConversations] = useState(() => {
-        try {
-            return normalizeConversations(JSON.parse(readStorage('suf-direct-messages', 'null')), peerDirectory.map((peer) => peer.username));
-        } catch {
-            return initialConversations();
-        }
-    });
+export default function HomePage({ onLogOut, theme, onToggleTheme, section = 'home', profileUsername = null, projectId = null, roomId = null, postId = null, messageUsername = null, savedView = false, search, community }) {
+    const { posts, setPosts } = community;
+    const [demoUsername, setDemoUsername] = useState('');
+    const liveChat = useLiveChat(demoUsername, section === 'messages' ? messageUsername : null);
+    const [previewConversations, setConversations] = useState(initialConversations);
+    const [storageReady, setStorageReady] = useState(false);
+    const conversations = demoUsername ? liveChat.conversations : previewConversations;
     const [messageStorageNotice, setMessageStorageNotice] = useState('');
     useEffect(() => {
-        const saved = writeStorage('suf-direct-messages', JSON.stringify(conversations));
+        if (!storageReady) return;
+        const saved = writeStorage('suf-direct-messages', JSON.stringify(previewConversations));
         setMessageStorageNotice(saved ? '' : 'Browser storage is unavailable or full. Messages will remain only for this session.');
-    }, [conversations]);
+    }, [previewConversations, storageReady]);
 
     function readConversation(username) {
+        if (demoUsername) return;
         setConversations((current) => !current[username]?.unread ? current : {
             ...current,
             [username]: { ...current[username], unread: 0 },
@@ -40,27 +44,22 @@ export default function HomePage({ onLogOut, theme, onToggleTheme, section = 'ho
     }
 
     function startConversation(username) {
+        if (demoUsername) {
+            if (username !== demoUsername && peerDirectory.some((peer) => peer.username === username)) {
+                navigate('/messages/' + username);
+            }
+            return;
+        }
         if (!peerDirectory.some((peer) => peer.username === username)) return;
         if (!conversations[username] && relationships[username] !== 'connected') return;
         setConversations((current) => current[username] ? current : {
             ...current, [username]: { username, messages: [], unread: 0 },
         });
-        window.location.hash = '/messages/' + username;
+        navigate('/messages/' + username);
     }
 
-    const [currentProfile, setCurrentProfile] = useState(loadProfile);
-    const [relationships, setRelationships] = useState(() => {
-        try {
-            const stored = JSON.parse(readStorage('suf-peer-relationships', 'null'));
-            if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return initialRelationships;
-            return Object.fromEntries(peerDirectory.map((peer) => [
-                peer.username,
-                ['none', 'outgoing', 'incoming', 'connected'].includes(stored[peer.username]) ? stored[peer.username] : 'none',
-            ]));
-        } catch {
-            return initialRelationships;
-        }
-    });
+    const [currentProfile, setCurrentProfile] = useState(defaultProfile);
+    const [relationships, setRelationships] = useState(initialRelationships);
     const [peerNotice, setPeerNotice] = useState('');
 
     function handlePeerAction(username, action) {
@@ -72,35 +71,47 @@ export default function HomePage({ onLogOut, theme, onToggleTheme, section = 'ho
             cancel: 'Request cancelled.',
             accept: 'Request accepted. You are now peers.',
             decline: 'Request declined.',
+            remove: 'Peer removed from your circle.',
         };
         const saved = writeStorage('suf-peer-relationships', JSON.stringify(updated));
         setPeerNotice(messages[action] + (saved ? ' Preview only; no real request was sent.' : ' Browser storage is unavailable; this change lasts for this session.'));
     }
 
     useEffect(() => {
-        setQuery('');
         setPeerNotice('');
     }, [section, profileUsername]);
 
-    const [activeItem, setActiveItem] = useState('Home');
-    const postUrls = useRef([]);
-    useEffect(() => () => postUrls.current.forEach((url) => URL.revokeObjectURL(url)), []);
+    useEffect(() => { setQuery(section === 'search' ? search.q : ''); }, [section, search?.q]);
+
+    const activeItem = savedView ? 'Saved posts' : 'Home';
 
     function updatePost(id, change) {
         setPosts((current) => current.map((post) => post.id === id ? change(post) : post));
     }
-    const [posts, setPosts] = useState(initialPosts);
-    const [query, setQuery] = useState('');
+    const [query, setQuery] = useState(section === 'search' ? search.q : '');
     const [pageNotice, setPageNotice] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const [savedIds, setSavedIds] = useState(() => {
-        try {
-            const saved = JSON.parse(readStorage('suf-saved-posts', '[]'));
-            return Array.isArray(saved) ? saved : [];
-        } catch {
-            return [];
+    const [savedIds, setSavedIds] = useState([]);
+
+    useEffect(() => {
+        const readJson = (key, fallback) => {
+            try { return JSON.parse(readStorage(key, JSON.stringify(fallback))); }
+            catch { return fallback; }
+        };
+        setConversations(normalizeConversations(readJson('suf-direct-messages', null), peerDirectory.map((peer) => peer.username)));
+        setCurrentProfile(loadProfile());
+        const stored = readJson('suf-peer-relationships', null);
+        if (stored && typeof stored === 'object' && !Array.isArray(stored)) {
+            setRelationships(Object.fromEntries(peerDirectory.map((peer) => [peer.username,
+                ['none', 'outgoing', 'incoming', 'connected'].includes(stored[peer.username]) ? stored[peer.username] : 'none',
+            ])));
         }
-    });
+        const saved = readJson('suf-saved-posts', []);
+        setSavedIds(Array.isArray(saved) ? saved : []);
+        setStorageReady(true);
+    }, []);
+
+    useEffect(() => { setCurrentPage(1); }, [postId]);
 
     function toggleSaved(postId) {
         setSavedIds((current) => {
@@ -116,31 +127,21 @@ export default function HomePage({ onLogOut, theme, onToggleTheme, section = 'ho
     }
 
     const visiblePosts = useMemo(() => {
-        const normalizedQuery = query.trim().toLowerCase().replace('#', '');
-
         return posts.filter((post) => {
             if (postId) return String(post.id) === postId;
             if (activeItem === 'Saved posts' && !savedIds.includes(post.id)) {
                 return false;
             }
-            const searchableText = [
-                post.author,
-                post.title,
-                post.body,
-                ...post.tags,
-            ]
-                .join(' ')
-                .toLowerCase();
-
-            return searchableText.includes(normalizedQuery);
+            return true;
         });
-    }, [posts, query, activeItem, savedIds, postId]);
+    }, [posts, activeItem, savedIds, postId]);
 
     const totalPages = Math.max(
         1,
         Math.ceil(visiblePosts.length / POSTS_PER_PAGE),
     );
-    const firstPostIndex = (currentPage - 1) * POSTS_PER_PAGE;
+    const pageNumber = Math.min(currentPage, totalPages);
+    const firstPostIndex = (pageNumber - 1) * POSTS_PER_PAGE;
     const postsOnCurrentPage = visiblePosts.slice(
         firstPostIndex,
         firstPostIndex + POSTS_PER_PAGE,
@@ -157,17 +158,18 @@ export default function HomePage({ onLogOut, theme, onToggleTheme, section = 'ho
     }
 
     function selectNavigation(item) {
-        if (['Projects', 'Peers', 'Messages'].includes(item)) {
-            window.location.hash = '/' + item.toLowerCase();
+        if (['Projects', 'Peers', 'Messages', 'Search'].includes(item)) {
+            navigate('/' + item.toLowerCase());
             setQuery('');
             setPageNotice('');
+        } else if (item === 'Saved posts') {
+            navigate('/home?saved=1');
         } else {
-            window.location.hash = '/home';
+            navigate('/home');
         }
-        setActiveItem(['Projects', 'Peers', 'Messages'].includes(item) ? 'Home' : item);
         setCurrentPage(1);
         setPageNotice(
-            (item === 'Home' || item === 'Saved posts' || item === 'Projects' || item === 'Peers' || item === 'Messages')
+            ['Home', 'Saved posts', 'Projects', 'Peers', 'Messages', 'Search'].includes(item)
                 ? ''
                 : `${item} will be built in the next frontend steps.`,
         );
@@ -177,8 +179,7 @@ export default function HomePage({ onLogOut, theme, onToggleTheme, section = 'ho
         const id = Date.now();
         const attachments = files.map((file, index) => {
             const info = validatePostFile(file);
-            const url = URL.createObjectURL(new Blob([file], { type: info.mime }));
-            postUrls.current.push(url);
+            const url = community.attach(file, info.mime);
             return { id: id + '-' + index, name: file.name, size: file.size, url, kind: info.kind, mime: info.mime };
         });
         setPosts((current) => [{
@@ -187,9 +188,8 @@ export default function HomePage({ onLogOut, theme, onToggleTheme, section = 'ho
             attachments, likes: 0, comments: 0, thread: [],
         }, ...current]);
         setCurrentPage(1);
-        setActiveItem('Home');
         setQuery('');
-        window.location.hash = '/home';
+        navigate('/home');
     }
 
     return (
@@ -197,7 +197,7 @@ export default function HomePage({ onLogOut, theme, onToggleTheme, section = 'ho
             <header className="home-topbar">
                 <a
                     className="home-logo"
-                    href="#/home"
+                    href="/home"
                     aria-label="SUF Home"
                 >
                     <img
@@ -210,20 +210,24 @@ export default function HomePage({ onLogOut, theme, onToggleTheme, section = 'ho
                     />
                 </a>
 
-                <label className="global-search">
-                    <span aria-hidden="true">⌕</span>
+                <form className="global-search" role="search" onSubmit={(event) => { event.preventDefault(); navigate(searchUrl({ ...(section === 'search' ? search : {}), q: query.trim(), page: 1 })); }}>
+                    <button type="submit" aria-label="Submit community search">⌕</button>
                     <input
                         type="search"
                         value={query}
                         onChange={changeSearch}
+                        aria-label="Search community"
+                        maxLength={200}
                         placeholder="Search peers, projects, posts, or #tags"
                     />
-                </label>
+                </form>
 
                 <div className="topbar-actions">
                     <button
                         type="button"
                         aria-label="Notifications"
+                        disabled
+                        title="Notifications are not connected yet"
                     >
                         ♢<i />
                     </button>
@@ -244,7 +248,7 @@ export default function HomePage({ onLogOut, theme, onToggleTheme, section = 'ho
                     >
                         {theme === 'dark' ? '☀ Light' : '☾ Dark'}
                     </button>
-                    <a className="profile-header-link" href="#/profile" aria-label="Open your profile">
+                    <a className="profile-header-link" href="/profile" aria-label="Open your profile">
                         <Avatar initials="YO" photo={currentProfile.photo} small />
                     </a>
                     <button
@@ -260,23 +264,27 @@ export default function HomePage({ onLogOut, theme, onToggleTheme, section = 'ho
             <div className={section !== 'home' ? 'home-grid projects-grid' : 'home-grid'}>
                 <Sidebar
                     messageCount={Object.values(conversations).reduce((count, item) => count + (item.unread || 0), 0)}
-                    activeItem={section === 'messages' ? 'Messages' : section === 'peers' || (section === 'profile' && profileUsername) ? 'Peers' : section === 'projects' ? 'Projects' : section === 'profile' ? '' : activeItem}
+                    activeItem={section === 'search' ? 'Search' : section === 'messages' ? 'Messages' : section === 'peers' || (section === 'profile' && profileUsername) ? 'Peers' : section === 'projects' ? 'Projects' : section === 'profile' ? '' : activeItem}
                     onSelect={selectNavigation}
                 />
 
-                {section === 'messages' ? (
+                {section === 'search' ? <SearchPage state={search} community={community} /> : section === 'messages' ? (
                     <MessagesPage
+                        key={demoUsername || 'preview'}
                         conversations={conversations}
                         selectedUsername={messageUsername}
-                        relationships={relationships}
+                        relationships={demoUsername ? Object.fromEntries(peerDirectory.filter((peer) => peer.username !== demoUsername).map((peer) => [peer.username, 'connected'])) : relationships}
                         onStart={startConversation}
                         onRead={readConversation}
-                        onSend={(username, text) => setConversations((current) => sendDirectMessage(current, username, text, relationships[username] === 'connected'))}
-                        onLike={(username, id) => setConversations((current) => toggleMessageLike(current, username, id))}
-                        storageNotice={messageStorageNotice}
+                        onSend={(username, text) => demoUsername ? liveChat.send({ type: 'send', recipient: username, text }) : setConversations((current) => sendDirectMessage(current, username, text, relationships[username] === 'connected'))}
+                        onLike={(username, id, liked) => demoUsername ? liveChat.send({ type: 'like', recipient: username, id, liked }) : setConversations((current) => toggleMessageLike(current, username, id))}
+                        storageNotice={demoUsername ? liveChat.error : messageStorageNotice}
+                        demoUsername={demoUsername}
+                        onDemoChange={(username) => { setDemoUsername(username); navigate('/messages'); }}
+                        connectionStatus={liveChat.status}
                     />
                 ) : section === 'peers' ? (
-                    <PeersPage query={query} relationships={relationships} onAction={handlePeerAction} notice={peerNotice} />
+                    <PeersPage relationships={relationships} onAction={handlePeerAction} notice={peerNotice} />
                 ) : section === 'profile' && profileUsername && profileUsername !== 'you' ? (
                     <PublicProfilePage
                         key={profileUsername}
@@ -295,12 +303,12 @@ export default function HomePage({ onLogOut, theme, onToggleTheme, section = 'ho
                         onProfileChange={setCurrentProfile}
                         posts={posts}
                         onUpdatePost={updatePost}
-                        account={{ peerCount: Object.values(relationships).filter((status) => status === 'connected').length }}
+                        account={{ peerCount: Object.values(relationships).filter((status) => status === 'connected').length, projectCount: community.projects.filter((project) => project.owner === 'you').length }}
                         savedIds={savedIds}
                         onToggleSaved={toggleSaved}
                     />
                 ) : section === 'projects' ? (
-                    <ProjectsPage query={query} initialProjectId={projectId} />
+                    <ProjectsPage community={community} initialProjectId={projectId} initialRoomId={roomId} />
                 ) : (
                 <section className="feed-column">
                     {pageNotice && (
@@ -316,13 +324,7 @@ export default function HomePage({ onLogOut, theme, onToggleTheme, section = 'ho
 
                     <PostComposer photo={currentProfile.photo} onPublish={publishPost} />
 
-                    {postId && <p className="page-notice"><a href="#/home">← Back to all posts</a> · Public post preview</p>}
-                    {query && !postId && (
-                        <p className="search-summary">
-                            {visiblePosts.length} result
-                            {visiblePosts.length === 1 ? '' : 's'} for “{query}”
-                        </p>
-                    )}
+                    {postId && <p className="page-notice"><a href="/home">← Back to all posts</a> · Public post preview</p>}
 
                     <div className="post-list">
                         {postsOnCurrentPage.map((post) => (
@@ -353,18 +355,18 @@ export default function HomePage({ onLogOut, theme, onToggleTheme, section = 'ho
                         >
                             <button
                                 type="button"
-                                disabled={currentPage === 1}
-                                onClick={() => changePage(currentPage - 1)}
+                                disabled={pageNumber === 1}
+                                onClick={() => changePage(pageNumber - 1)}
                             >
                                 ← Previous
                             </button>
                             <span>
-                                Page {currentPage} of {totalPages}
+                                Page {pageNumber} of {totalPages}
                             </span>
                             <button
                                 type="button"
-                                disabled={currentPage === totalPages}
-                                onClick={() => changePage(currentPage + 1)}
+                                disabled={pageNumber === totalPages}
+                                onClick={() => changePage(pageNumber + 1)}
                             >
                                 Next →
                             </button>
@@ -374,13 +376,9 @@ export default function HomePage({ onLogOut, theme, onToggleTheme, section = 'ho
 
                 )}
 
-                {section === 'home' && <RightPanel relationships={relationships} onPeerAction={handlePeerAction} />}
+                {section === 'home' && <RightPanel community={community} relationships={relationships} onPeerAction={handlePeerAction} />}
             </div>
 
-            <footer className="home-footer">
-                <strong>SUF · Stack Under Flow</strong>
-                <span>Team and project information will be added here.</span>
-            </footer>
         </main>
     );
 }

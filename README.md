@@ -22,6 +22,14 @@ npm run preview
 
 The project uses React 19 and Vite 6. Fonts are Inter and JetBrains Mono, with local fallbacks.
 
+Community search combines posts, projects, peers, rooms and tags, with type/tag filters, sorting, pagination and shareable URLs. Project, room and attachment state survives navigation until refresh or logout. Privacy Policy and Terms of Service pages are linked from every page's footer. See [Search](docs/SEARCH.md) and [Legal pages](docs/LEGAL-PAGES.md).
+
+Fonts are hosted locally in `public/fonts`, with their SIL Open Font License notices included. The interface does not require a Google Fonts request.
+
+Browser validation: all 42 automated checks passed across Chrome, Edge, and Firefox. Run `npm run test:browser` with the dev server running. See [tested versions, coverage and limitations](docs/BROWSER-COMPATIBILITY.md).
+
+Public pages now use **server-side rendering (SSR)** with normal URLs such as `/projects/react-auth`, `/posts/1`, and `/profile/sara`. HTML includes public content before JavaScript runs, then React hydrates it. Old `#/...` links migrate in the browser. `npm run build` builds client and server bundles; `npm start` (or `npm run preview`) runs the production Node server on port 4173. Configure `.env` from `.env.example` when needed, including the public `SITE_URL`. See [SSR setup and evaluation checks](docs/SSR.md). This implements the subject's SSR minor module (1 point, subject to evaluation).
+
 ## Implemented frontend
 
 - Login and signup forms with validation and password visibility.
@@ -38,6 +46,8 @@ The project uses React 19 and Vite 6. Fonts are Inter and JetBrains Mono, with l
 This is a frontend prototype. Login does not authenticate against a server. Some data and activity counts are examples. Posts, projects, rooms, chat and attachments are temporary preview state; theme, saved-post IDs and profile edits use browser storage where available.
 
 The Run snippet button does not compile or execute code. Reports and peer requests are local preview actions. Private messages, account management, notifications, public profiles and peer services remain to be implemented/connected.
+
+Messages now also offers a **local WebSocket demo** during development. Open `/messages` in two tabs, choose different sample users with the demo selector, and start a conversation between them. Messages and likes update live. The demo has no real account authentication and its history resets when Vite restarts. See [Messages frontend](docs/MESSAGES-FRONTEND.md) for testing and backend integration details. Run `npm test` to check the chat implementation.
 
 42 verification, protected access, persistent uploads, account storage, real-time chat and code execution require backend services. Frontend visibility checks do not enforce access control.
 

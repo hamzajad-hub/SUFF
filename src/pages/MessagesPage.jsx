@@ -7,18 +7,20 @@ function timeLabel(value) {
     return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-export default function MessagesPage({ conversations, selectedUsername, relationships, onStart, onSend, onLike, onRead, storageNotice }) {
+export default function MessagesPage({ conversations, selectedUsername, relationships, onStart, onSend, onLike, onRead, storageNotice, demoUsername = '', onDemoChange, connectionStatus = 'offline' }) {
     const [query, setQuery] = useState('');
     const [peerQuery, setPeerQuery] = useState('');
     const [newChat, setNewChat] = useState(false);
     const [drafts, setDrafts] = useState({});
     const [status, setStatus] = useState('');
+    const [sending, setSending] = useState(false);
     const log = useRef(null);
     const composer = useRef(null);
-    const activePeer = peerDirectory.find((peer) => peer.username === selectedUsername);
+    const activePeer = peerDirectory.find((peer) => peer.username === selectedUsername && peer.username !== demoUsername);
     const conversation = activePeer ? conversations[selectedUsername] : null;
     const messages = conversation?.messages || [];
     const connected = activePeer && relationships[selectedUsername] === 'connected';
+    const canSend = connected && (!demoUsername || connectionStatus === 'connected');
     const draft = drafts[selectedUsername] || '';
     const list = conversationList(conversations, query, peerDirectory);
     const myPeers = searchPeers(peerDirectory.filter((peer) => relationships[peer.username] === 'connected'), peerQuery);
@@ -34,13 +36,20 @@ export default function MessagesPage({ conversations, selectedUsername, relation
         if (log.current) log.current.scrollTop = log.current.scrollHeight;
     }, [selectedUsername, messages.length]);
 
-    function send(event) {
+    async function send(event) {
         event.preventDefault();
-        if (!connected || !draft.trim()) return;
-        onSend(selectedUsername, draft);
-        setDrafts((current) => ({ ...current, [selectedUsername]: '' }));
-        setStatus('Message saved in this browser preview. It has not been delivered to another user.');
-        composer.current?.focus();
+        if (!canSend || sending || !draft.trim()) return;
+        const recipient = selectedUsername;
+        setSending(true);
+        setStatus('');
+        try {
+            await onSend(recipient, draft);
+            setDrafts((current) => ({ ...current, [recipient]: '' }));
+            setStatus(demoUsername ? 'Message accepted by the local chat server.' : 'Message saved in this browser preview. It has not been delivered to another user.');
+            composer.current?.focus();
+        } catch (error) {
+            setStatus(error.message || 'Unable to send. Your draft has been kept.');
+        } finally { setSending(false); }
     }
 
     return (
@@ -53,6 +62,18 @@ export default function MessagesPage({ conversations, selectedUsername, relation
                 </div>
                 <button className="project-primary" type="button" onClick={() => setNewChat(!newChat)} aria-expanded={newChat}>+ New message</button>
             </header>
+            {import.meta.env.DEV && (
+                <div className="chat-connection-controls">
+                    <label>Local live chat demo
+                        <select value={demoUsername} onChange={(event) => onDemoChange(event.target.value)}>
+                            <option value="">Local preview (no connection)</option>
+                            {peerDirectory.map((peer) => <option key={peer.username} value={peer.username}>Connect as {peer.name}</option>)}
+                        </select>
+                    </label>
+                    {demoUsername && <span role="status">{connectionStatus === 'connected' ? 'Connected' : connectionStatus === 'reconnecting' ? 'Reconnecting…' : 'Connecting…'} · @{demoUsername}</span>}
+                    <small>For testing: choose different users in two tabs. Everyone is a peer in this demo. History lasts until the development server restarts.</small>
+                </div>
+            )}
             {storageNotice && <p className="page-notice" role="status">{storageNotice}</p>}
             <div className={`messages-layout${activePeer ? ' has-active-chat' : ''}${newChat ? ' choosing-conversation' : ''}`}>
                 <aside className="conversation-sidebar" aria-label="Conversations">
@@ -63,7 +84,7 @@ export default function MessagesPage({ conversations, selectedUsername, relation
                             <h2>Message a peer</h2>
                             <label>Find a peer<input type="search" value={peerQuery} onChange={(event) => setPeerQuery(event.target.value)} placeholder="Search your peers" /></label>
                             {myPeers.map((peer) => <button key={peer.username} type="button" onClick={() => { onStart(peer.username); setNewChat(false); }}><Avatar initials={peer.initials} small showStatus={false} /><span>{peer.name}<small>@{peer.username}</small></span><span aria-hidden="true">↗</span></button>)}
-                            {!myPeers.length && <p>No matching peers. <a href="#/peers">Find your peers</a> to start a conversation.</p>}
+                            {!myPeers.length && <p>No matching peers. <a href="/peers">Find your peers</a> to start a conversation.</p>}
                         </section>
                     )}
                     <div className="conversation-list">
@@ -84,12 +105,12 @@ export default function MessagesPage({ conversations, selectedUsername, relation
                 {activePeer ? (
                     <section className="direct-chat" aria-label={`Conversation with ${activePeer.name}`}>
                         <header className="direct-chat-header">
-                            <a className="chat-mobile-back" href="#/messages" aria-label="Back to inbox">←</a>
-                            <a className="direct-chat-person" href={`#/profile/${activePeer.username}`}><Avatar initials={activePeer.initials} small showStatus={false} /><span><b>{activePeer.name}</b><small>@{activePeer.username} · {connected ? 'Your peer' : 'Public profile'}</small></span></a>
-                            <a className="direct-profile-link" href={`#/profile/${activePeer.username}`}>View profile ↗</a>
+                            <a className="chat-mobile-back" href="/messages" aria-label="Back to inbox">←</a>
+                            <a className="direct-chat-person" href={`/profile/${activePeer.username}`}><Avatar initials={activePeer.initials} small showStatus={false} /><span><b>{activePeer.name}</b><small>@{activePeer.username} · {connected ? 'Your peer' : 'Public profile'}</small></span></a>
+                            <a className="direct-profile-link" href={`/profile/${activePeer.username}`}>View profile ↗</a>
                         </header>
                         <div className="direct-message-log" role="log" aria-label="Direct messages" aria-relevant="additions" ref={log}>
-                            <p className="direct-chat-intro">Only this browser preview is connected. The initial conversation is an example.</p>
+                            <p className="direct-chat-intro">{demoUsername ? 'Live local demo. Messages are shared with tabs connected as this peer.' : 'Only this browser preview is connected. The initial conversation is an example.'}</p>
                             {messages.map((message, index) => {
                                 const day = new Date(message.time).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
                                 const previousDay = index ? new Date(messages[index - 1].time).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) : null;
@@ -97,7 +118,7 @@ export default function MessagesPage({ conversations, selectedUsername, relation
                                     <React.Fragment key={message.id}>
                                         {day !== previousDay && <div className="direct-date-divider"><span>{day}</span></div>}
                                         <article className={message.sender === 'you' ? 'direct-message outgoing' : 'direct-message incoming'}>
-                                            <div className="direct-message-bubble"><p>{message.text}</p><div><time dateTime={message.time}>{timeLabel(message.time)}</time>{message.sender === 'you' && <small>Saved locally</small>}<button type="button" aria-label={`Like message: ${message.text.slice(0, 35)}`} aria-pressed={message.liked} onClick={() => onLike(selectedUsername, message.id)}>♡ {message.liked ? 1 : 0}</button></div></div>
+                                            <div className="direct-message-bubble"><p>{message.text}</p><div><time dateTime={message.time}>{timeLabel(message.time)}</time>{message.sender === 'you' && <small>{demoUsername ? 'Server confirmed' : 'Saved locally'}</small>}<button type="button" disabled={Boolean(demoUsername) && connectionStatus !== 'connected'} aria-label={`Like message: ${message.text.slice(0, 35)}`} aria-pressed={message.liked} onClick={async () => { try { await onLike(selectedUsername, message.id, !message.liked); } catch (error) { setStatus(error.message); } }}>♡ {message.likeCount ?? (message.liked ? 1 : 0)}</button></div></div>
                                         </article>
                                     </React.Fragment>
                                 );
@@ -105,9 +126,9 @@ export default function MessagesPage({ conversations, selectedUsername, relation
                             {!messages.length && <div className="direct-start"><span aria-hidden="true">◇</span><h2>Say hello to {activePeer.name}.</h2><p>A question or a shared idea is a good place to start.</p></div>}
                         </div>
                         <form className="direct-composer" onSubmit={send}>
-                            {!connected && <p className="page-notice">Become peers to send messages. <a href={`#/profile/${activePeer.username}`}>Open profile</a></p>}
-                            <label><span className="visually-hidden">Message to {activePeer.username}</span><textarea ref={composer} value={draft} onChange={(event) => setDrafts((current) => ({ ...current, [selectedUsername]: event.target.value }))} disabled={!connected} maxLength={5000} rows={3} placeholder={`Message ${activePeer.name}...`} /></label>
-                            <div className="direct-composer-actions"><span>{draft.length}/5000 · Text messages</span><button className="project-primary" type="submit" disabled={!connected || !draft.trim()}>Send ↗</button></div>
+                            {!connected && <p className="page-notice">Become peers to send messages. <a href={`/profile/${activePeer.username}`}>Open profile</a></p>}
+                            <label><span className="visually-hidden">Message to {activePeer.username}</span><textarea ref={composer} value={draft} onChange={(event) => setDrafts((current) => ({ ...current, [selectedUsername]: event.target.value }))} disabled={!connected || sending} maxLength={5000} rows={3} placeholder={`Message ${activePeer.name}...`} /></label>
+                            <div className="direct-composer-actions"><span>{draft.length}/5000 · Text messages</span><button className="project-primary" type="submit" disabled={!canSend || sending || !draft.trim()}>{sending ? 'Sending…' : 'Send ↗'}</button></div>
                             {status && <p className="direct-send-status" role="status">{status}</p>}
                         </form>
                     </section>
@@ -118,7 +139,7 @@ export default function MessagesPage({ conversations, selectedUsername, relation
                     </section>
                 )}
             </div>
-            <p className="profile-preview-note">Frontend preview · Messages and likes are saved in this browser where storage is available. Real delivery, presence, and live updates need the backend.</p>
+            <p className="profile-preview-note">{demoUsername ? 'Local WebSocket demo · Sample identities, in-memory history, and no real authentication. Production accounts and persistent storage need backend integration.' : 'Frontend preview · Messages and likes are saved in this browser where storage is available. Real delivery, presence, and live updates need the backend.'}</p>
         </section>
     );
 }

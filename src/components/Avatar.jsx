@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function Avatar({ initials, photo = '', small = false, showStatus = true }) {
+export default function Avatar({ initials, photo = '', small = false, showStatus = false }) {
     return (
         <span className={small ? 'avatar avatar-small' : 'avatar'}>
             {photo ? <img src={photo} alt="Profile photo" /> : initials}

@@ -8,7 +8,7 @@ export default function PublicProfilePage({ username, posts, onUpdatePost, relat
     const [tab, setTab] = useState('Posts');
     const peer = peerDirectory.find((person) => person.username === username);
     if (!peer) {
-        return <section className="projects-page profile-empty"><h1>Profile not found.</h1><p>This user is not in the preview directory.</p><a className="project-secondary" href="#/peers">Back to peers</a></section>;
+        return <section className="projects-page profile-empty"><h1>Profile not found.</h1><p>This user is not in the preview directory.</p><a className="project-secondary" href="/peers">Back to peers</a></section>;
     }
     const userPosts = posts.filter((post) => post.author === peer.username);
     const projects = communityProjects.filter((project) => project.owner === peer.username);
@@ -16,7 +16,7 @@ export default function PublicProfilePage({ username, posts, onUpdatePost, relat
 
     return (
         <section className="projects-page profile-page" aria-labelledby="public-profile-title">
-            <a className="public-profile-back" href="#/peers">← Back to peers</a>
+            <a className="public-profile-back" href="/peers">← Back to peers</a>
             <div className="profile-cover">
                 <span className="eyebrow">PART OF THE COMMUNITY</span>
                 <span className="profile-cover-code" aria-hidden="true">{'{ learn. connect. build. }'}</span>
@@ -32,7 +32,7 @@ export default function PublicProfilePage({ username, posts, onUpdatePost, relat
                     {status === 'connected' && (
                         <a
                             className="project-primary peer-message-link"
-                            href={`#/messages/${peer.username}`}
+                            href={`/messages/${peer.username}`}
                         >
                             Send message
                         </a>
@@ -65,7 +65,7 @@ export default function PublicProfilePage({ username, posts, onUpdatePost, relat
                         <article className="project-card" key={project.id}>
                             <h2>{project.name}</h2><p>{project.summary}</p>
                             <div className="project-tags">{project.tags.map((tag) => <span key={tag}>#{tag}</span>)}</div>
-                            <a className="project-open" href={`#/projects?project=${encodeURIComponent(project.id)}`}>Open project ↗</a>
+                            <a className="project-open" href={`/projects/${encodeURIComponent(project.id)}`}>Open project ↗</a>
                         </article>
                     ))}
                 </div>

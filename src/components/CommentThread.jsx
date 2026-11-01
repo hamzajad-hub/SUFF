@@ -10,7 +10,7 @@ function CommentItem({ comment, comments, onReply, onLike, depth = 0 }) {
             <div className="thread-comment-body">
                 <Avatar initials={comment.initials || 'YO'} small />
                 <div className="thread-bubble">
-                    <a className="post-profile-link" href={comment.author === 'you' ? '#/profile' : `#/profile/${comment.author}`}>{comment.author}</a>
+                    <a className="post-profile-link" href={comment.author === 'you' ? '/profile' : `/profile/${comment.author}`}>{comment.author}</a>
                     <p>{comment.body}</p>
                     <div className="thread-actions">
                         <button type="button" aria-label={`Like comment by ${comment.author}`} aria-pressed={Boolean(comment.liked)} onClick={() => onLike(comment.id)}>♡ {(comment.likes || 0) + (comment.liked ? 1 : 0)}</button>

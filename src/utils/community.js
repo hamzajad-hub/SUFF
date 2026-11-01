@@ -9,6 +9,7 @@ export function roomMembers(room) {
 }
 
 export function setRoomJoined(room, joined) {
+    if (room.owner === 'you' && !joined) return room;
     const members = roomMembers(room).filter((name) => name !== 'you');
     return { ...room, joined, members: joined ? [...members, 'you'] : members };
 }

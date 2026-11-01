@@ -45,9 +45,9 @@ export default function PeersPage({ query = '', relationships, onAction, notice 
                 {visible.map((peer) => (
                     <article className="peer-card" key={peer.username}>
                         <div className="peer-card-top">
-                            <a className="peer-portrait" href={`#/profile/${peer.username}`} aria-label={`View ${peer.username}'s profile`}>{peer.initials}</a>
+                            <a className="peer-portrait" href={`/profile/${peer.username}`} aria-label={`View ${peer.username}'s profile`}>{peer.initials}</a>
                             <div>
-                                <a className="peer-name" href={`#/profile/${peer.username}`}>{peer.name}</a>
+                                <a className="peer-name" href={`/profile/${peer.username}`}>{peer.name}</a>
                                 {peer.verified42 && <span className="profile-42-badge">42 ✓</span>}
                                 <span className="peer-username">@{peer.username}</span>
                             </div>
@@ -56,8 +56,8 @@ export default function PeersPage({ query = '', relationships, onAction, notice 
                         <p>{peer.bio}</p>
                         <div className="profile-skills">{peer.skills.map((skill) => <span key={skill}>#{skill}</span>)}</div>
                         <div className="peer-card-bottom">
-                            <a href={`#/profile/${peer.username}`}>View profile ↗</a>
-                            <div className="peer-card-connection"><PeerActions username={peer.username} status={relationships[peer.username]} onAction={onAction} />{relationships[peer.username] === 'connected' && <a className="peer-message-link" href={`#/messages/${peer.username}`}>Message ↗</a>}</div>
+                            <a href={`/profile/${peer.username}`}>View profile ↗</a>
+                            <div className="peer-card-connection"><PeerActions username={peer.username} status={relationships[peer.username]} onAction={onAction} />{relationships[peer.username] === 'connected' && <a className="peer-message-link" href={`/messages/${peer.username}`}>Message ↗</a>}</div>
                         </div>
                     </article>
                 ))}

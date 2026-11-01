@@ -16,7 +16,9 @@ export default function LoginPage({ onEnter, theme, onToggleTheme }) {
             return;
         }
 
-        const destination = new URL(loginUrl, window.location.origin);
+        let destination;
+        try { destination = new URL(loginUrl, window.location.origin); }
+        catch { setNotice('42 sign-in is unavailable. Please try again later.'); return; }
 
         if (!['http:', 'https:'].includes(destination.protocol)) {
             setNotice('42 sign-in is unavailable. Please try again later.');
@@ -70,7 +72,7 @@ export default function LoginPage({ onEnter, theme, onToggleTheme }) {
             >
                 <a
                     className="brand"
-                    href="#/login"
+                    href="/login"
                     aria-label="Stack Under Flow"
                 >
                     <img
@@ -241,7 +243,7 @@ export default function LoginPage({ onEnter, theme, onToggleTheme }) {
                         )}
 
                         {!signup && (
-                            <a className="text-button" href="#/forgot-password">
+                            <a className="text-button" href="/forgot-password">
                                 Forgot password?
                             </a>
                         )}

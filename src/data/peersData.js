@@ -67,6 +67,7 @@ export function changeRelationship(current, username, action) {
         cancel: { outgoing: 'none' },
         accept: { incoming: 'connected' },
         decline: { incoming: 'none' },
+        remove: { connected: 'none' },
     };
     const next = transitions[action]?.[status];
     if (!next || !peerDirectory.some((peer) => peer.username === username)) {

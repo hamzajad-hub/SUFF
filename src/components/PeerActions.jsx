@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export default function PeerActions({ username, status = 'none', onAction, compact = false }) {
+    const [confirming, setConfirming] = useState(false);
     if (status === 'connected') {
-        return <span className="peer-connected" role="status">✓ Peers</span>;
+        return <div className="peer-request-actions"><span className="peer-connected" role="status">✓ Peers</span>{confirming ? <><button className="project-secondary" type="button" onClick={() => { setConfirming(false); onAction(username, 'remove'); }}>Confirm remove {username}</button><button className="project-secondary" type="button" onClick={() => setConfirming(false)}>Keep peer</button></> : <button className="project-secondary" type="button" aria-label={`Remove ${username} from peers`} onClick={() => setConfirming(true)}>Remove peer</button>}</div>;
     }
 
     return (

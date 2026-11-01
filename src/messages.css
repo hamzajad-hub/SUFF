@@ -383,3 +383,16 @@
         display: inline-block;
     }
 }
+.chat-connection-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    margin-bottom: 18px;
+    border: 1px solid currentColor;
+    border-radius: 12px;
+}
+.chat-connection-controls label { display: grid; gap: 6px; }
+.chat-connection-controls select { padding: 8px; max-width: 100%; font: inherit; }
+.chat-connection-controls small { flex-basis: 100%; }

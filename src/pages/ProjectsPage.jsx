@@ -1,12 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import DiscussionRooms from '../components/DiscussionRooms.jsx';
-import { seedRooms } from '../data/roomsData.js';
-import { communityProjects } from '../data/projectsData.js';
 
-export default function ProjectsPage({ query = '', account = null, initialProjectId = null }) {
-    const [roomsByProject, setRoomsByProject] = useState(() => Object.fromEntries(
-        communityProjects.map((project) => [project.id, seedRooms(project)]),
-    ));
+export default function ProjectsPage({ community, account = null, initialProjectId = null, initialRoomId = null }) {
+    const { projects, setProjects, roomsByProject, setRoomsByProject } = community;
+    const [query, setQuery] = useState('');
 
     function updateRooms(project, update) {
         setRoomsByProject((current) => ({
@@ -22,22 +19,16 @@ export default function ProjectsPage({ query = '', account = null, initialProjec
             rooms: Math.max(0, item.rooms + (kind === 'room' ? 1 : kind === 'delete-room' ? -1 : 0)),
         });
         setProjects((current) => current.map((item) => item.id === project.id ? update(item) : item));
-        setSelected((current) => current?.id === project.id ? update(current) : current);
     }
 
     function attachRoomFile(file) {
-        const url = URL.createObjectURL(new Blob([file], { type: 'application/octet-stream' }));
-        attachmentUrls.current.push(url);
+        const url = community.attach(file, 'application/octet-stream');
         return { name: file.name, size: file.size, url };
     }
 
     const [briefFile, setBriefFile] = useState(null);
-    const attachmentUrls = useRef([]);
     const fileInput = useRef(null);
 
-    useEffect(() => () => {
-        attachmentUrls.current.forEach((url) => URL.revokeObjectURL(url));
-    }, []);
 
     function chooseBrief(event) {
         const file = event.target.files[0];
@@ -58,10 +49,11 @@ export default function ProjectsPage({ query = '', account = null, initialProjec
         setBriefFile(file);
     }
 
-    const [projects, setProjects] = useState(communityProjects);
     const [tab, setTab] = useState('community');
     const [formOpen, setFormOpen] = useState(false);
-    const [selected, setSelected] = useState(null);
+    const [selectedId, setSelectedId] = useState(initialProjectId);
+    const selected = projects.find((project) => project.id === selectedId) || null;
+    function setSelected(project) { setSelectedId(project?.id || null); }
     const [notice, setNotice] = useState('');
     const [sort, setSort] = useState('activity');
     const [tag, setTag] = useState('All');
@@ -71,15 +63,13 @@ export default function ProjectsPage({ query = '', account = null, initialProjec
     useEffect(() => {
         if (!verified) {
             setTab('community');
-            setSelected(null);
+            if (tab === '42') setSelected(null);
             setTag('All');
         }
     }, [verified]);
 
     useEffect(() => {
-        if (initialProjectId) {
-            setSelected(communityProjects.find((project) => project.id === initialProjectId) || null);
-        }
+        setSelectedId(initialProjectId);
     }, [initialProjectId]);
 
     const normalizedQuery = query.trim().toLowerCase().replace(/^#/, '');
@@ -127,8 +117,7 @@ export default function ProjectsPage({ query = '', account = null, initialProjec
             const type = briefFile.name.toLowerCase().endsWith('.pdf')
                 ? 'application/pdf'
                 : 'text/plain;charset=utf-8';
-            const url = URL.createObjectURL(new Blob([briefFile], { type }));
-            attachmentUrls.current.push(url);
+            const url = community.attach(briefFile, type);
             attachment = {
                 name: briefFile.name,
                 size: briefFile.size,
@@ -137,7 +126,7 @@ export default function ProjectsPage({ query = '', account = null, initialProjec
         }
 
         const newProject = {
-            id: `local-${Date.now()}`,
+            id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
             name,
             summary,
             readme,
@@ -157,7 +146,7 @@ export default function ProjectsPage({ query = '', account = null, initialProjec
         setFormOpen(false);
         setTag('All');
         setSelected(newProject);
-        setNotice('Project created in this preview. It will stay until the page is refreshed.');
+        setNotice('Project created for this session. It stays available while you navigate, until refresh or logout.');
     }
 
     return (
@@ -253,7 +242,7 @@ export default function ProjectsPage({ query = '', account = null, initialProjec
                                 </button>
                             </div>
                         )}
-                        <small>Files stay in this browser session until you refresh or leave Projects.</small>
+                        <small>Files stay in this browser session until you refresh or log out.</small>
                     </div>
                     <div className="project-banner-actions">
                         <button className="project-primary" type="submit">Create project</button>
@@ -264,7 +253,7 @@ export default function ProjectsPage({ query = '', account = null, initialProjec
 
             {selected && (
                 <section className="project-detail" aria-label={`${selected.name} overview`}>
-                    <button className="project-back" type="button" onClick={() => setSelected(null)}>← Back to projects</button>
+                    <a className="project-back" href="/projects" onClick={() => setSelected(null)}>← Back to projects</a>
                     <span className="project-caption">PROJECT OVERVIEW</span>
                     <h2>{selected.name}</h2>
                     {selected.owner === 'you' && <p className="project-admin-label">You are the project admin. You can manage every room in this project.</p>}
@@ -284,6 +273,7 @@ export default function ProjectsPage({ query = '', account = null, initialProjec
                     <DiscussionRooms
                         key={selected.id}
                         project={selected}
+                        initialRoomId={initialRoomId}
                         rooms={roomsByProject[selected.id] || []}
                         onChange={(update) => updateRooms(selected, update)}
                         onActivity={(kind) => recordActivity(selected, kind)}
@@ -295,6 +285,7 @@ export default function ProjectsPage({ query = '', account = null, initialProjec
             {!selected && source.length > 0 && (
                 <>
                     <div className="project-controls">
+                        <label className="project-sort">Search projects<input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Project name, owner, or #tag" /></label>
                         <div className="project-filters" aria-label="Filter by tag">
                             {tags.map((value) => (
                                 <button
@@ -338,9 +329,11 @@ export default function ProjectsPage({ query = '', account = null, initialProjec
                                     <span><b>{project.rooms}</b> rooms</span>
                                     <span><b>{project.peers}</b> peers</span>
                                 </div>
-                                <button className="project-open" type="button" onClick={() => setSelected(project)}>
+                                <a className="project-open" href={`/projects/${encodeURIComponent(project.id)}`} onClick={(event) => {
+                                    if (project.id.startsWith('local-')) { event.preventDefault(); setSelected(project); }
+                                }}>
                                     Open project <span aria-hidden="true">↗</span>
-                                </button>
+                                </a>
                             </article>
                         ))}
                     </div>

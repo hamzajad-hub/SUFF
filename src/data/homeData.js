@@ -1,5 +1,6 @@
 export const navigationItems = [
     { icon: '⌂', label: 'Home' },
+    { icon: '⌕', label: 'Search' },
     { icon: '□', label: 'Projects' },
     { icon: '▧', label: 'Saved posts' },
     { icon: '◇', label: 'Messages' },
