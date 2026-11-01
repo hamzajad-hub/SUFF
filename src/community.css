@@ -1,0 +1,300 @@
+.media-composer .composer-attachments,
+.media-composer .composer-tools,
+.media-composer .composer-error {
+    grid-column: 2 / -1;
+}
+.composer-tools {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.composer-tools label {
+    margin: 0;
+    color: #00bd8b;
+    font-size: 11px;
+}
+.composer-tools input {
+    padding: 8px;
+}
+.composer-tools small,
+.composer-file > span {
+    color: #7f969f;
+    font-size: 10px;
+    overflow-wrap: anywhere;
+}
+.composer-attachments {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+}
+.composer-file {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid #45645b;
+    border-radius: 8px;
+    min-width: 0;
+}
+.composer-file img,
+.composer-file video {
+    width: 100%;
+    max-height: 150px;
+    object-fit: contain;
+    border-radius: 5px;
+}
+.composer-file button,
+.post-share-panel button,
+.thread-actions button,
+.thread-reply-form button {
+    padding: 7px 10px;
+    border: 1px solid #45645b;
+    border-radius: 6px;
+    background: transparent;
+    color: #00bd8b;
+    font-size: 11px;
+}
+.composer-error {
+    color: #ffaeae;
+    font-size: 12px;
+}
+.post-attachments {
+    margin: 18px 0;
+    display: grid;
+    gap: 12px;
+}
+.post-attachments figure {
+    min-width: 0;
+    margin: 0;
+    border: 1px solid #45645b;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.post-attachments img,
+.post-attachments video {
+    display: block;
+    width: 100%;
+    max-height: 450px;
+    object-fit: contain;
+    background: #081015;
+}
+.post-attachments figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px;
+    font-size: 11px;
+    overflow-wrap: anywhere;
+}
+.post-attachments a {
+    color: #00bd8b;
+}
+.attachment-document {
+    padding: 22px;
+    color: inherit;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+.post-share-panel {
+    padding: 18px;
+    margin-top: 16px;
+    border: 1px solid #45645b;
+    border-radius: 8px;
+    font-size: 12px;
+}
+.post-share-panel > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.post-share-panel small {
+    display: block;
+    margin-top: 12px;
+    color: #7f969f;
+    line-height: 1.7;
+}
+.thread-comment {
+    margin-bottom: 14px;
+}
+.thread-comment-body {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+.thread-bubble {
+    flex: 1;
+    min-width: 0;
+    padding: 12px;
+    border-radius: 8px;
+    background: #0d181e;
+    font-size: 12px;
+}
+.thread-bubble p {
+    color: #a4b6bd;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.8;
+}
+.thread-actions,
+.thread-reply-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+.thread-actions button[aria-pressed='true'] {
+    background: #00bd8b22;
+    color: #00e6a8;
+}
+.thread-reply-form input {
+    flex: 1;
+    min-width: 90px;
+}
+.thread-children {
+    padding-left: 18px;
+    margin: 12px 0 0 12px;
+    border-left: 1px solid #45645b;
+}
+.thread-deep {
+    padding-left: 0;
+    margin-left: 0;
+    border-left: 0;
+}
+.vote-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px;
+    border: 1px solid var(--project-border);
+    border-radius: 7px;
+    color: var(--project-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+}
+.vote-controls button {
+    padding: 6px 8px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--project-muted);
+    font-size: 11px;
+}
+.vote-controls button[aria-pressed='true'] {
+    background: var(--project-soft);
+    color: var(--project-accent);
+}
+.room-list-item > .vote-controls {
+    flex-direction: column;
+}
+.room-message .vote-controls {
+    margin-top: 8px;
+}
+.room-community-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    font-size: 11px;
+}
+.room-management {
+    padding: 18px;
+    margin-bottom: 20px;
+    border: 1px solid var(--project-border);
+    border-radius: 10px;
+}
+.room-management p {
+    color: var(--project-muted);
+    font-size: 12px;
+    line-height: 1.8;
+}
+.room-member {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--project-border);
+    margin-bottom: 12px;
+    font-size: 12px;
+}
+.danger-button {
+    padding: 10px 14px;
+    border: 1px solid #c76262;
+    border-radius: 7px;
+    background: #b8282814;
+    color: #e38c8c;
+    font-size: 12px;
+}
+.room-delete-confirm button {
+    margin-right: 10px;
+}
+.room-message-sort {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    margin: 0;
+    color: var(--project-muted);
+    font-size: 10px;
+}
+.room-message-sort select {
+    padding: 7px;
+    border: 1px solid var(--project-border);
+    border-radius: 5px;
+    background: var(--project-surface);
+    color: var(--project-text);
+    font-size: 11px;
+}
+.project-admin-label {
+    color: var(--project-accent);
+    font-size: 12px;
+    margin: 12px 0;
+}
+body.light-theme .thread-bubble {
+    background: #edf5f2;
+}
+body.light-theme .thread-bubble p,
+body.light-theme .post-share-panel small,
+body.light-theme .composer-tools small {
+    color: #536c70;
+}
+body.light-theme .thread-actions button,
+body.light-theme .thread-reply-form button,
+body.light-theme .composer-file button,
+body.light-theme .post-share-panel button,
+body.light-theme .post-attachments a,
+body.light-theme .composer-tools label {
+    color: #08775a;
+}
+body.light-theme .composer-error,
+body.light-theme .danger-button {
+    color: #a42c2c;
+}
+@media (max-width: 760px) {
+    .media-composer .publish-button {
+        grid-column: 2;
+        grid-row: auto;
+    }
+    .media-composer .composer-attachments,
+    .media-composer .composer-tools,
+    .media-composer .composer-error {
+        grid-column: 1 / -1;
+    }
+    .thread-comment-body {
+        gap: 6px;
+    }
+    .thread-children {
+        padding-left: 7px;
+        margin-left: 4px;
+    }
+    .thread-deep {
+        padding-left: 0;
+        margin-left: 0;
+    }
+}
